@@ -1,72 +1,79 @@
 INCLUDE config.inc
 
 .code
-ProcessRuntimeTx PROC USES esi edi,
-    pArray:PTR Product,
-    arraySize:DWORD,
-    txType:DWORD,
-    prodID:DWORD,
-    val:DWORD
+; ADD Transaction
+ExecuteADD PROC USES ebx,
+    pProduct:PTR Product,
+    qty:DWORD
 
-    ; Search for the dynamic record index offset
-    INVOKE SearchByID, pArray, arraySize, prodID
-    cmp eax, -1
-    je FailureExit
+    mov ebx, pProduct
+    mov eax, qty
+    add (Product PTR [ebx]).CurrentStock, eax
+    mov eax, 1 ; Success
+    ret
+ExecuteADD ENDP
+
+; SALE Transaction with stock underflow protection
+ExecuteSALE PROC USES ebx ecx,
+    pProduct:PTR Product,
+    qty:DWORD
+
+    mov ebx, pProduct
+    mov ecx, (Product PTR [ebx]).CurrentStock
+    cmp ecx, qty
+    jb UnderflowError
     
-    imul eax, TYPE Product
-    mov esi, pArray
-    add esi, eax ; ESI now points directly to the matched structure memory address
-    
-    cmp txType, 1
-    je AddTx
-    cmp txType, 2
-    je SaleTx
-    cmp txType, 3
-    je ReturnTx
-    cmp txType, 4
-    je PriceTx
-    jmp FailureExit
-
-AddTx:
-    mov eax, val
-    add (Product PTR [esi]).CurrentStock, eax
-    jmp SuccessExit
-
-SaleTx:
-    mov eax, val
-    mov ecx, (Product PTR [esi]).CurrentStock
-    cmp ecx, eax
-    jb FailureExit ; Avoid underflow errors
-    
-    sub (Product PTR [esi]).CurrentStock, eax
-    add (Product PTR [esi]).TotalSold, eax
-    jmp SuccessExit
-
-ReturnTx:
-    mov eax, val
-    add (Product PTR [esi]).CurrentStock, eax
-    ; Deduct from historical sold tracker
-    mov ecx, (Product PTR [esi]).TotalSold
-    cmp ecx, eax
-    jb ForceZeroSold
-    sub (Product PTR [esi]).TotalSold, eax
-    jmp SuccessExit
-
-ForceZeroSold:
-    mov (Product PTR [esi]).TotalSold, 0
-    jmp SuccessExit
-
-PriceTx:
-    mov eax, val
-    mov (Product PTR [esi]).UnitPrice, eax
-    jmp SuccessExit
-
-FailureExit:
-    mov eax, 0
+    ; Deduct stock and increment lifetime sales metric
+    mov eax, qty
+    sub (Product PTR [ebx]).CurrentStock, eax
+    add (Product PTR [ebx]).TotalSold, eax
+    mov eax, 1 ; Success
     ret
 
-SuccessExit:
-    mov eax, 1
+UnderflowError:
+    mov eax, 0 ; Failed validation check
     ret
-ProcessRuntimeTx ENDP
+ExecuteSALE ENDP
+
+; RETURN Transaction
+ExecuteRETURN PROC USES ebx,
+    pProduct:PTR Product,
+    qty:DWORD
+
+    mov ebx, pProduct
+    ; Ensure we don't reduce lifetime sales below zero
+    mov eax, qty
+    mov ecx, (Product PTR [ebx]).TotalSold
+    cmp ecx, eax
+    jae DeductSales
+    mov (Product PTR [ebx]).TotalSold, 0
+    jmp AdjustStock
+
+DeductSales:
+    sub (Product PTR [ebx]).TotalSold, eax
+
+AdjustStock:
+    add (Product PTR [ebx]).CurrentStock, eax
+    mov eax, 1 ; Success
+    ret
+ExecuteRETURN ENDP
+
+; PRICEUPDATE Transaction
+ExecutePRICEUPDATE PROC USES ebx,
+    pProduct:PTR Product,
+    newPrice:DWORD
+
+    mov ebx, pProduct
+    mov eax, newPrice
+    cmp eax, 0
+    jle PriceError
+    
+    mov (Product PTR [ebx]).UnitPrice, eax
+    mov eax, 1 ; Success
+    ret
+
+PriceError:
+    mov eax, 0 ; Invalid update value
+    ret
+ExecutePRICEUPDATE ENDP
 END

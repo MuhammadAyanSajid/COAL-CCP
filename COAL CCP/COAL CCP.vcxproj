@@ -152,6 +152,7 @@
       <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:/irvine;%(IncludePaths)</IncludePaths>
     </MASM>
     <MASM Include="services.asm" />
+    <MASM Include="statistics.asm" />
     <MASM Include="transaction.asm">
       <IncludePaths Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:/irvine;%(IncludePaths)</IncludePaths>
     </MASM>

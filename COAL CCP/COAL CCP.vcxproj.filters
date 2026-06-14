@@ -30,6 +30,9 @@
     <MASM Include="services.asm">
       <Filter>Source Files</Filter>
     </MASM>
+    <MASM Include="statistics.asm">
+      <Filter>Source Files</Filter>
+    </MASM>
   </ItemGroup>
   <ItemGroup>
     <None Include="config.inc">
