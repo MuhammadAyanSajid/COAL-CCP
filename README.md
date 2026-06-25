@@ -102,4 +102,3 @@ Upon running the executable, navigate the program through the console menu selec
 4.  **Calculate Financials & Generate Report:** Writes a processed summary file named `report.txt` directly to your folder.
 5.  **Search Product & Generate Shipment Code:** Resolves product indices and outputs an 8-character hexadecimal tracking hash.
 6.  **Exit:** Closes the console safely.
-```
